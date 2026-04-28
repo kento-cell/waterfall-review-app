@@ -1,0 +1,16 @@
+{
+  "name": "waterfall-review-app-slides",
+  "version": "1.0.0",
+  "description": "Waterfall Review App 概要スライド生成 (PptxGenJS)",
+  "private": true,
+  "scripts": {
+    "build": "node generate.js",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "pptxgenjs": "^4.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,78 @@
+# ===== Python / Backend =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+pip-wheel-metadata/
+
+# Backend artifacts (uploaded files / generated PDFs / SQLite)
+backend/storage/
+backend/data/
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+backend/.env
+backend/.env.local
+
+# Alembic auto-generated revisions are committed; only ignore staging
+backend/alembic/versions/*.tmp
+
+# ===== Node / Frontend =====
+node_modules/
+.next/
+out/
+.turbo/
+.cache/
+coverage/
+.vitest-cache/
+
+# Env files
+frontend/.env.local
+frontend/.env.*.local
+frontend/.env
+
+# Build output
+frontend/build/
+frontend/dist/
+
+# ===== IDE / OS =====
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Logs / Temp =====
+*.log
+logs/
+tmp/
+.tmp/
+
+# ===== Secrets =====
+*.pem
+*.key
+secrets/
+.secret/
+
+# ===== Generated docs / screenshots staging =====
+docs/screenshots/_staging/
+
+# ===== Misc =====
+*.bak
+*.orig
+.history/
