@@ -19,6 +19,11 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+const DEMO_CREDENTIALS: LoginFormValues = {
+  email: "demo@example.com",
+  password: "password123",
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const { setToken, setUser } = useAuthStore();
@@ -27,10 +32,17 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
+
+  const fillDemoCredentials = () => {
+    setServerError(null);
+    setValue("email", DEMO_CREDENTIALS.email, { shouldValidate: true });
+    setValue("password", DEMO_CREDENTIALS.password, { shouldValidate: true });
+  };
 
   const onSubmit = async (values: LoginFormValues) => {
     setServerError(null);
@@ -48,11 +60,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <Card className="w-full max-w-md bg-white">
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,_#e0f2fe,_transparent_34%),linear-gradient(135deg,_#f8fafc_0%,_#eef2ff_100%)] px-4">
+      <Card className="w-full max-w-md border-slate-200 bg-white/95 shadow-xl">
         <CardHeader>
+          <div className="mb-2 inline-flex w-fit rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+            Waterfall Review
+          </div>
           <CardTitle>ログイン</CardTitle>
-          <CardDescription>AIレビュー支援ツール</CardDescription>
+          <CardDescription>AIレビュー支援ツールにアクセスします</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
@@ -82,6 +97,17 @@ export default function LoginPage() {
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "ログイン中..." : "ログイン"}
             </Button>
+            <div className="rounded-lg border border-dashed bg-slate-50 p-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium">デモアカウント</p>
+                  <p className="text-xs text-muted-foreground">demo@example.com / password123</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={fillDemoCredentials}>
+                  入力する
+                </Button>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>

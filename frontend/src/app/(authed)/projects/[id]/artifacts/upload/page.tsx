@@ -9,13 +9,12 @@ import { artifactsApi } from "@/lib/api/artifacts";
 import { ALL_PHASES } from "@/types/api";
 import type { Phase } from "@/types/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dropzone } from "@/components/ui/dropzone";
 import { Label } from "@/components/ui/label";
-import { formatBytes } from "@/lib/utils";
 
 const ALLOWED_EXT = [".xlsx", ".docx", ".pdf", ".vb", ".cs", ".java", ".py", ".js", ".ts"];
-const MAX_SIZE = 50 * 1024 * 1024;
+const MAX_SIZE_MB = 50;
 
 export default function UploadPage() {
   const params = useParams<{ id: string }>();
@@ -43,25 +42,10 @@ export default function UploadPage() {
     onError: () => setError("アップロードに失敗しました"),
   });
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = (nextFile: File | null) => {
     setError(null);
-    const f = e.target.files?.[0] ?? null;
-    if (!f) {
-      setFile(null);
-      return;
-    }
-    const ext = "." + (f.name.split(".").pop()?.toLowerCase() ?? "");
-    if (!ALLOWED_EXT.includes(ext)) {
-      setError(`許可されていない拡張子です。許可: ${ALLOWED_EXT.join(", ")}`);
-      setFile(null);
-      return;
-    }
-    if (f.size > MAX_SIZE) {
-      setError(`50MB を超えています (現: ${formatBytes(f.size)})`);
-      setFile(null);
-      return;
-    }
-    setFile(f);
+    setProgress(0);
+    setFile(nextFile);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -91,6 +75,7 @@ export default function UploadPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">アップロード</CardTitle>
+          <CardDescription>工程を選んでから成果物を投入します。ドラッグ&ドロップにも対応しています。</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -111,13 +96,16 @@ export default function UploadPage() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="file">ファイル ({ALLOWED_EXT.join(", ")} / 最大 50MB)</Label>
-              <Input id="file" type="file" accept={ALLOWED_EXT.join(",")} onChange={onFileChange} />
-              {file && (
-                <span className="text-sm text-muted-foreground">
-                  選択: {file.name} ({formatBytes(file.size)})
-                </span>
-              )}
+              <Dropzone
+                label="成果物ファイル"
+                description="Excel / Word / PDF / ソースコードを投入できます"
+                accept={ALLOWED_EXT.join(",")}
+                maxSizeMb={MAX_SIZE_MB}
+                file={file}
+                onFileChange={onFileChange}
+                variant="blue"
+                required
+              />
             </div>
 
             {progress > 0 && progress < 100 && (

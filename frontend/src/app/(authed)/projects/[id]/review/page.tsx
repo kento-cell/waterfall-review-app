@@ -8,7 +8,7 @@ import { projectsApi } from "@/lib/api/projects";
 import { artifactsApi } from "@/lib/api/artifacts";
 import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dropzone } from "@/components/ui/dropzone";
 
 type ReviewMode = "ui" | "ss" | "cross";
@@ -42,6 +42,7 @@ export default function ReviewExecutePage() {
 
   const needUi = mode === "ui" || mode === "cross";
   const needSs = mode === "ss" || mode === "cross";
+  const modeMeta = MODES.find((m) => m.value === mode) ?? MODES[0];
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -86,11 +87,19 @@ export default function ReviewExecutePage() {
     },
   });
 
-  const canSubmit =
-    !!aspectFile &&
-    (!needUi || !!uiFile) &&
-    (!needSs || !!ssFile) &&
-    !submitMutation.isPending;
+  const requiredChecks = [
+    { label: "観点ファイル", ready: !!aspectFile, detail: aspectFile?.name ?? "未選択" },
+    ...(needUi ? [{ label: "UI 機能概要書", ready: !!uiFile, detail: uiFile?.name ?? "未選択" }] : []),
+    ...(needSs ? [{ label: "SS 構造設計書", ready: !!ssFile, detail: ssFile?.name ?? "未選択" }] : []),
+  ];
+  const readyCount = requiredChecks.filter((item) => item.ready).length;
+  const missingItems = requiredChecks.filter((item) => !item.ready).map((item) => item.label);
+  const canSubmit = missingItems.length === 0 && !submitMutation.isPending;
+  const submitButtonLabel = submitMutation.isPending
+    ? "アップロードとレビュー起動中..."
+    : canSubmit
+      ? "▶ AI レビュー実行"
+      : "必須ファイルを選択してください";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,17 +117,42 @@ export default function ReviewExecutePage() {
 
       <h1 className="text-2xl font-semibold">AI レビュー実行</h1>
 
+      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 text-white shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm text-slate-300">現在のレビュー種別</p>
+            <p className="mt-1 text-xl font-semibold">{modeMeta.label}</p>
+            <p className="mt-1 text-sm text-slate-300">{modeMeta.desc}</p>
+          </div>
+          <div className="min-w-[220px]">
+            <div className="flex items-center justify-between text-sm text-slate-300">
+              <span>準備状況</span>
+              <span>
+                {readyCount}/{requiredChecks.length}
+              </span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15">
+              <div
+                className="h-full rounded-full bg-emerald-400 transition-all"
+                style={{ width: `${(readyCount / requiredChecks.length) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">① 工程選択</CardTitle>
+          <CardDescription>レビュー目的に合わせて、必要な投入資料が自動で切り替わります。</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-3 md:flex-row">
             {MODES.map((m) => (
               <label
                 key={m.value}
-                className={`flex flex-1 cursor-pointer flex-col gap-1 rounded-lg border-2 p-4 transition-colors ${
-                  mode === m.value ? "border-blue-700 bg-blue-50" : "border-gray-200 hover:bg-gray-50"
+                className={`relative flex flex-1 cursor-pointer flex-col gap-2 rounded-xl border-2 p-4 transition-all ${
+                  mode === m.value ? "border-slate-900 bg-slate-50 shadow-sm" : "border-gray-200 hover:bg-gray-50"
                 }`}
               >
                 <input
@@ -126,20 +160,33 @@ export default function ReviewExecutePage() {
                   name="mode"
                   value={m.value}
                   checked={mode === m.value}
-                  onChange={() => setMode(m.value)}
+                  onChange={() => {
+                    setMode(m.value);
+                    setSubmitError(null);
+                  }}
                   className="sr-only"
                 />
                 <div className="flex items-center gap-2">
                   <span
                     className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                      mode === m.value ? "border-blue-700" : "border-gray-400"
+                      mode === m.value ? "border-slate-900" : "border-gray-400"
                     }`}
                   >
-                    {mode === m.value && <span className="h-2 w-2 rounded-full bg-blue-700" />}
+                    {mode === m.value && <span className="h-2 w-2 rounded-full bg-slate-900" />}
                   </span>
                   <span className="font-semibold">{m.label}</span>
                 </div>
                 <span className="text-xs text-gray-500">{m.desc}</span>
+                <span className="text-xs text-gray-400">
+                  必須: {m.value === "ui" && "観点 / UI"}
+                  {m.value === "ss" && "観点 / SS"}
+                  {m.value === "cross" && "観点 / UI / SS"}
+                </span>
+                {mode === m.value && (
+                  <span className="absolute right-3 top-3 rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white">
+                    選択中
+                  </span>
+                )}
               </label>
             ))}
           </div>
@@ -149,6 +196,7 @@ export default function ReviewExecutePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">② 観点ファイル (PM 提供)</CardTitle>
+          <CardDescription>AI が何を重視して見るかを決める入力です。まずここを選択してください。</CardDescription>
         </CardHeader>
         <CardContent>
           <Dropzone
@@ -166,6 +214,7 @@ export default function ReviewExecutePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">③ レビュー対象資料</CardTitle>
+          <CardDescription>選択したレビュー種別で必須の資料だけが実行条件になります。</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -202,14 +251,53 @@ export default function ReviewExecutePage() {
         <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">{submitError}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex justify-end gap-2">
+      <Card className="border-slate-200 bg-slate-50">
+        <CardHeader>
+          <CardTitle className="text-lg">実行前チェック</CardTitle>
+          <CardDescription>不足している項目がなくなると実行できます。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 md:grid-cols-3">
+            {requiredChecks.map((item) => (
+              <div
+                key={item.label}
+                className={`rounded-lg border bg-white p-3 ${
+                  item.ready ? "border-emerald-200" : "border-amber-200"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium">{item.label}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs ${
+                      item.ready ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {item.ready ? "OK" : "未選択"}
+                  </span>
+                </div>
+                <p className="mt-1 truncate text-xs text-muted-foreground">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+          {missingItems.length > 0 && (
+            <p className="mt-3 text-sm text-amber-700">不足: {missingItems.join("、")}</p>
+          )}
+          {submitMutation.isPending && (
+            <p className="mt-3 text-sm text-slate-600">
+              ファイルをアップロードしてレビューを開始しています。画面を閉じずにお待ちください。
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Link href={`/projects/${projectId}`}>
           <Button type="button" variant="outline">
             キャンセル
           </Button>
         </Link>
         <Button type="submit" disabled={!canSubmit}>
-          {submitMutation.isPending ? "実行中..." : "▶ AI レビュー実行"}
+          {submitButtonLabel}
         </Button>
       </form>
     </div>

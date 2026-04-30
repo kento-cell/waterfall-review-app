@@ -43,6 +43,12 @@ export function Dropzone({
   const [isDragging, setIsDragging] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const inputId = React.useId();
+  const acceptedTypes = accept
+    ?.split(",")
+    .map((e) => e.trim())
+    .filter(Boolean)
+    .join(" / ");
 
   const validate = (f: File): string | null => {
     if (f.size > maxSizeMb * 1024 * 1024) {
@@ -62,12 +68,14 @@ export function Dropzone({
     setError(null);
     if (!f) {
       onFileChange(null);
+      if (inputRef.current) inputRef.current.value = "";
       return;
     }
     const err = validate(f);
     if (err) {
       setError(err);
       onFileChange(null);
+      if (inputRef.current) inputRef.current.value = "";
       return;
     }
     onFileChange(f);
@@ -92,6 +100,13 @@ export function Dropzone({
     inputRef.current?.click();
   };
 
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
     handleFile(f);
@@ -102,6 +117,8 @@ export function Dropzone({
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold">{label}</span>
         {required && <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-700">必須</span>}
+        {!required && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">任意</span>}
+        {file && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-700">選択済み</span>}
         {badge && (
           <span
             className="rounded px-2 py-0.5 text-xs font-bold text-white"
@@ -116,12 +133,22 @@ export function Dropzone({
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={onClick}
+        onKeyDown={onKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-controls={inputId}
+        aria-label={`${label}を選択`}
         className={cn(
-          "flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 transition-colors",
-          isDragging ? activeClasses[variant] : variantClasses[variant],
+          "flex min-h-[150px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          file
+            ? "border-emerald-500 bg-emerald-50 shadow-sm"
+            : isDragging
+              ? activeClasses[variant]
+              : variantClasses[variant],
         )}
       >
         <input
+          id={inputId}
           ref={inputRef}
           type="file"
           accept={accept}
@@ -139,7 +166,7 @@ export function Dropzone({
         {file && (
           <>
             <span className="text-3xl">📄</span>
-            <span className="text-sm font-semibold">{file.name}</span>
+            <span className="max-w-full truncate text-sm font-semibold">{file.name}</span>
             <span className="text-xs text-gray-500">{formatBytes(file.size)}</span>
             <button
               type="button"
@@ -153,6 +180,10 @@ export function Dropzone({
             </button>
           </>
         )}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+        {acceptedTypes && <span>形式: {acceptedTypes}</span>}
+        <span>最大: {maxSizeMb}MB</span>
       </div>
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>

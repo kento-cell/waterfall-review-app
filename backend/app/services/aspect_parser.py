@@ -17,6 +17,16 @@ class ParsedAspect:
 
 
 EXPECTED_HEADERS = ("観点名", "対象", "重要度", "工程", "レビュー指示文")
+# Per-column accepted header variants. The first entry of each column is the
+# canonical label used in error messages; later entries are accepted aliases
+# (e.g. legacy/sample headers with parenthetical annotations).
+ACCEPTED_HEADERS: tuple[tuple[str, ...], ...] = (
+    ("観点名",),
+    ("対象",),
+    ("重要度",),
+    ("工程",),
+    ("レビュー指示文", "レビュー指示文 (AIへのプロンプト)"),
+)
 VALID_TARGETS = {"UI", "SS", "UI×SS"}
 SEVERITY_MAP = {
     "高": "high",
@@ -78,11 +88,11 @@ def parse_txt_aspects(path: Path) -> list[ParsedAspect]:
 
 def _validate_excel_headers(sheet: Worksheet) -> None:
     values = [_clean_cell(sheet.cell(row=1, column=index).value) for index in range(1, 6)]
-    for index, (actual, expected) in enumerate(zip(values, EXPECTED_HEADERS, strict=True), start=1):
-        if actual != expected:
+    for index, (actual, accepted) in enumerate(zip(values, ACCEPTED_HEADERS, strict=True), start=1):
+        if actual not in accepted:
             column = chr(ord("A") + index - 1)
             raise ValueError(
-                f"row 1 column {column}: expected header {expected!r}, got {actual!r}"
+                f"row 1 column {column}: expected header {accepted[0]!r}, got {actual!r}"
             )
 
 

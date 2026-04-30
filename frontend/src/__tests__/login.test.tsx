@@ -54,4 +54,13 @@ describe("LoginPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "ログイン" }));
     expect(await screen.findByText(/メールアドレスの形式が不正です/)).toBeInTheDocument();
   });
+
+  it("fills demo credentials", async () => {
+    render(<LoginPage />);
+
+    await userEvent.click(screen.getByRole("button", { name: "入力する" }));
+
+    expect(screen.getByLabelText("メールアドレス")).toHaveValue("demo@example.com");
+    expect(screen.getByLabelText("パスワード")).toHaveValue("password123");
+  });
 });
