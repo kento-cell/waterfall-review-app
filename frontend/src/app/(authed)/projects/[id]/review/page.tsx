@@ -44,6 +44,26 @@ export default function ReviewExecutePage() {
   const needSs = mode === "ss" || mode === "cross";
   const modeMeta = MODES.find((m) => m.value === mode) ?? MODES[0];
 
+  // Drop hidden-side selections on mode switch so the user can't
+  // accidentally upload a stale file that's no longer required. Earlier
+  // versions kept stale files invisible-but-set, which uploaded under
+  // the wrong artifact category at submit time.
+  //
+  // Defense-in-depth: submitMutation also gates uploads with
+  // `needUi/needSs` (see lines below). This effect just keeps the UI
+  // state consistent with the visible slots — it's not the only guard.
+  //
+  // Why deps are only [mode]: the snapshot semantics here are "when
+  // the user switches mode, clear once". Including uiFile/ssFile would
+  // re-fire the effect every time the user picks a file (no-op when
+  // need* is true, but noisy and confusing).
+  React.useEffect(() => {
+    if (!needUi && uiFile) setUiFile(null);
+    if (!needSs && ssFile) setSsFile(null);
+    setSubmitError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
   const submitMutation = useMutation({
     mutationFn: async () => {
       // 1) Upload aspect file as artifact (phase: 観点)
@@ -124,7 +144,7 @@ export default function ReviewExecutePage() {
             <p className="mt-1 text-xl font-semibold">{modeMeta.label}</p>
             <p className="mt-1 text-sm text-slate-300">{modeMeta.desc}</p>
           </div>
-          <div className="min-w-[220px]">
+          <div className="min-w-[220px]" aria-live="polite">
             <div className="flex items-center justify-between text-sm text-slate-300">
               <span>準備状況</span>
               <span>
@@ -214,36 +234,43 @@ export default function ReviewExecutePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">③ レビュー対象資料</CardTitle>
-          <CardDescription>選択したレビュー種別で必須の資料だけが実行条件になります。</CardDescription>
+          <CardDescription>
+            {mode === "ui" && "UI レビュー: 機能概要書 1 ファイルだけ投入"}
+            {mode === "ss" && "SS レビュー: 構造設計書 1 ファイルだけ投入"}
+            {mode === "cross" && "UI × SS 整合性レビュー: 機能概要書 + 構造設計書 の両方を投入"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Dropzone
-              label="UI 機能概要書"
-              description="顧客向け、Excel 中心 (.xlsx / .docx / .pdf)"
-              accept={DOC_ACCEPT}
-              file={uiFile}
-              onFileChange={setUiFile}
-              variant={needUi ? "amber" : "default"}
-              required={needUi}
-              badge={{ text: "UI", color: "#ED6C02" }}
-            />
-            <Dropzone
-              label="SS 構造設計書"
-              description="PG/PT 向け、擬似コード+チェック仕様 (.xlsx / .docx / .pdf)"
-              accept={DOC_ACCEPT}
-              file={ssFile}
-              onFileChange={setSsFile}
-              variant={needSs ? "navy" : "default"}
-              required={needSs}
-              badge={{ text: "SS", color: "#1B3A6B" }}
-            />
+          <div
+            className={`grid gap-4 ${
+              mode === "cross" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+            }`}
+          >
+            {needUi && (
+              <Dropzone
+                label="UI 機能概要書"
+                description="顧客向け、Excel 中心 (.xlsx / .docx / .pdf)"
+                accept={DOC_ACCEPT}
+                file={uiFile}
+                onFileChange={setUiFile}
+                variant="amber"
+                required
+                badge={{ text: "UI", color: "#ED6C02" }}
+              />
+            )}
+            {needSs && (
+              <Dropzone
+                label="SS 構造設計書"
+                description="PG/PT 向け、擬似コード+チェック仕様 (.xlsx / .docx / .pdf)"
+                accept={DOC_ACCEPT}
+                file={ssFile}
+                onFileChange={setSsFile}
+                variant="navy"
+                required
+                badge={{ text: "SS", color: "#1B3A6B" }}
+              />
+            )}
           </div>
-          <p className="mt-2 text-xs text-gray-500">
-            {mode === "ui" && "UI レビュー: SS は不要 (グレー表示)"}
-            {mode === "ss" && "SS レビュー: UI は不要 (グレー表示、整合性参考のため任意で添付可)"}
-            {mode === "cross" && "UI × SS 整合性レビュー: 両方 必須"}
-          </p>
         </CardContent>
       </Card>
 
